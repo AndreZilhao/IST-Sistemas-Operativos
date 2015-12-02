@@ -1,2 +1,2 @@
 # IST-Sistemas-Operativos
-Repositorio do Projecto de Inteligencia Artificial 
+Repositorio do Projecto de Sistemas Operativos
