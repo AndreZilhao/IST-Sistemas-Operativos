@@ -3,7 +3,7 @@
 - Rita Rocha
 - Eduardo Monteiro
 @ ist.utl.pt 2015
-Operating Systems - Part 4
+Operating Systems - Part 5
 Program: par-shell
 Description: C program that emulates a shell. Has the capability to run multiple programs at the same time on a multi-core machine.
 Uses a list to keep track of all processes as well as return values. Acepts up to 5 optional arguments. Stores a log of the process
@@ -18,6 +18,7 @@ exit
 */
 
 #include <stdio.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <string.h>
@@ -198,7 +199,17 @@ int main(int argc, char *argv[])
 			pthread_mutex_unlock(&mutex);	
 			pid = fork();
 			if (pid == 0)
-			{		
+			{	
+				char childPid[8];
+				char filename[14]="par-shell-out-";
+				char extension[5]=".txt\0";
+				int childOutput; 
+
+				snprintf(childPid, 8, "%d", getpid());
+				strcat(strcat(filename, childPid), extension);
+				childOutput =  open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+				dup2(childOutput, 1);
+				close(childOutput);
 				execv(lineArgs[0], lineArgs);
 				perror("ERROR");
 				exit(EXIT_FAILURE);
