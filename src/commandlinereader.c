@@ -22,15 +22,13 @@ Return value:
  The number of arguments that were read, or -1 if some error occurred.
 */
 
-int readLineArguments(char **argVector, int vectorSize)
+int readLineArguments(char **argVector,  int vectorSize)
 {
   int numtokens = 0;
   char *s = " \n\t";
-
   char *str = NULL;
   size_t size = 0;
   int i;
-
   char *token;
 
   if (argVector == NULL || vectorSize == 0)
@@ -39,7 +37,7 @@ int readLineArguments(char **argVector, int vectorSize)
   if (getline(&str, &size, stdin) < 0) {
     return -1;
   }
-   
+
   /* get the first token */
   token = strtok(str, s);
    

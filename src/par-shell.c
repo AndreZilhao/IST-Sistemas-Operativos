@@ -168,26 +168,22 @@ int main(int argc, char *argv[])
     close(STDIN_FILENO);
     pipeFd = open(PIPE, O_RDONLY);
     dup2(pipeFd, STDIN_FILENO);
-
-
-
-
-
 	while(1)
 	{
 		if(readLineArguments(lineArgs,argNr+1) == -1)
 		{
+			printf("laskjdklasjdklaj");
 			continue;
 		}
 		/*"exit"
 		If "exit" is found, two iterations of the process list are run. The first one calls "waitpid()" on all child processes,
 		and the second one prints the Process ID and return value.*/
 
-		printf("%s\n", lineArgs[0] );
+		//printf("%s\n", lineArgs[0] );
 
 		if(NULL == lineArgs[0])
 		{
-			continue;
+			return 0;
 		}
 
 		if(strcmp ("exit", lineArgs[0]) == 0)
