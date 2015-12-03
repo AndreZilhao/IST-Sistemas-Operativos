@@ -26,10 +26,12 @@ exit
 #include <sys/wait.h>
 #include <time.h>
 #include <semaphore.h>
+#include <sys/stat.h>
 #include "list.h"
 #include "commandlinereader.h"
 #define MAXLINE 40
 #define MAXPAR 2
+#define PIPE "par-shell-in"
 
 int numChildren;
 int exitcalled;
@@ -136,7 +138,7 @@ int main(int argc, char *argv[])
 
 	/*Variables:
 	argNR = Number of Variable Arguments, pid = Process ID, lineArgs = Input String, pidList = Process List.*/
-	int argNr = 6, pid;
+	int argNr = 6, pid, returnValue;
 	char * lineArgs[argNr];
 	pidList = lst_new();
 	exitcalled = 0;
@@ -157,6 +159,20 @@ int main(int argc, char *argv[])
 	pthread_t monitor;
 	pthread_create(&monitor, 0, monitoriza, NULL);
 
+	/*Creation of the Pipe*/
+	returnValue = mkfifo(PIPE, S_IRWXU);
+    printf("The mkfifo() call returned %d\n", returnValue); //debug
+
+    /*Redirecting Stdin to Pipe*/
+    int pipeFd;
+    close(STDIN_FILENO);
+    pipeFd = open(PIPE, O_RDONLY);
+    dup2(pipeFd, STDIN_FILENO);
+
+
+
+
+
 	while(1)
 	{
 		if(readLineArguments(lineArgs,argNr+1) == -1)
@@ -166,6 +182,8 @@ int main(int argc, char *argv[])
 		/*"exit"
 		If "exit" is found, two iterations of the process list are run. The first one calls "waitpid()" on all child processes,
 		and the second one prints the Process ID and return value.*/
+
+		printf("%s\n", lineArgs[0] );
 
 		if(NULL == lineArgs[0])
 		{
@@ -205,10 +223,11 @@ int main(int argc, char *argv[])
 				char extension[5]=".txt\0";
 				int childOutput; 
 
-				snprintf(childPid, 8, "%d", getpid());
+				snprintf(childPid, 8, "%d", (int) getpid());
 				strcat(strcat(filename, childPid), extension);
 				childOutput =  open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-				dup2(childOutput, 1);
+				close(STDOUT_FILENO);
+				dup2(childOutput, STDOUT_FILENO);
 				close(childOutput);
 				execv(lineArgs[0], lineArgs);
 				perror("ERROR");
