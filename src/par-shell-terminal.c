@@ -6,21 +6,25 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <signal.h>
 #include <semaphore.h>
 #include <sys/stat.h>
 #include "list.h"
 #include "commandlinereader.h"
-#define PIPEOUT "pipe-out-"
+#define PIPEOUT "pipe-out"
+#define MESSAGE_LENGHT 100
 #define MAXLINE 255 //Linux Maximum Filename Length
 
+int pipeFd;
 char * getAline(void);
+void exit_function();
 int sendMessage(char * message, int fd);
 
 
 int main(int argc, char *argv[])
 {
 	/*Redirecting Stdin to Pipe*/
-	int pipeFd;
+
 	char * input;
 	char * output;
 	char firstArgument[MAXLINE];
@@ -40,26 +44,16 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	//Signal Par-shell that a new terminal has been opened.
+
 	snprintf(message, 14, "[new]");
 	output = strcat(message, localPid);
 	if(sendMessage(output, pipeFd) == -1) return -1;
 
-
+	signal (SIGINT, exit_function);
 	while(1)
 	{
 		input = getAline();
-		puts(input);
 		sscanf(input,"%s",firstArgument);
-		puts(firstArgument);
-		printf("%ld\n", sizeof(firstArgument));
-
-		/*
-		"exit"
-		If "exit" is found, two iterations of the process list are run. The first one calls "waitpid()" on all child processes,
-		and the second one prints the Process ID and return value.
-		*/
-		
-
 		
 		if(NULL == firstArgument)
 		{
@@ -79,14 +73,25 @@ int main(int argc, char *argv[])
 
 		if(strcmp ("stats", firstArgument) == 0)
 		{
+			char parShellOut[20] = PIPEOUT;
+			char statsMessage[MESSAGE_LENGHT];
+			int returnPipe;
+			int messageFd;
+
+			snprintf(localPid, 8, " %d", (int) getpid());
+			strcat(parShellOut, localPid);
+			returnPipe = mkfifo(parShellOut, S_IRWXU);
+			printf("The mkfifo() call returned %d\n", returnPipe);
+
+			snprintf(localPid, 8, " %d\n", (int) getpid());
 			output = strcat(firstArgument,localPid);
 			if(sendMessage(output, pipeFd) == -1) return -1;
-
-
-			char parShellOut[20] = PIPEOUT;
-			//strcat(parShellOut, pidChar);
-			int returnpipe = mkfifo(parShellOut, S_IRWXU);
-			printf("The mkfifo() call returned %d\n", returnpipe);
+			
+			messageFd = open(parShellOut, O_RDONLY);
+			read(messageFd, statsMessage, MESSAGE_LENGHT);
+			close(messageFd);
+			unlink(parShellOut);
+			printf("%s", statsMessage);
 			continue;
 		}
 		if(sendMessage(input, pipeFd) == -1) return -1;
@@ -136,4 +141,18 @@ char * getAline(void) {
 	}
 	*line = '\0';
 	return linep;
+}
+
+void exit_function()  {
+	
+	char * output;
+	char localPid[8];
+	char message[14];
+	snprintf(localPid, 8, " %d\n", (int) getpid());
+	snprintf(message, 14, "[del]");
+	output = strcat(message, localPid);
+	if(sendMessage(output, pipeFd) == -1) return;
+	printf("\n");
+	close(pipeFd);
+	exit(EXIT_SUCCESS);
 }

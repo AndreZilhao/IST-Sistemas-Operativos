@@ -47,6 +47,9 @@ void lst_term_insert(list_term *list, int pid);
 void lst_te_remove(list_term *list, int pid);
 
 /* lst_term_print - print the terminal */
+void lst_term_destroy(list_term *list);
+
+/* lst_term_print - print the terminal */
 void lst_term_print(list_term *list);
 
 

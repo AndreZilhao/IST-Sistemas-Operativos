@@ -25,15 +25,15 @@ exit
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <signal.h>
 #include <semaphore.h>
 #include <sys/stat.h>
 #include "list.h"
 #include "commandlinereader.h"
 #define MAXLINE 40
 #define MAXPAR 2
-#define PIPE "par-shell-in"
-#define MAXTERMINALS 50
-#define PIPEOUT "pipe-out-"
+#define PIPEIN "par-shell-in"
+#define PIPEOUT "pipe-out "
 #define MESSAGE_LENGHT 100
 
 int numChildren;
@@ -45,9 +45,11 @@ list_term *termList;
 pthread_mutex_t mutex;
 pthread_cond_t condMonitor;
 pthread_cond_t condMaxpar;
+pthread_t monitor;
 FILE * logger;
 
 void sendStatsPidPipe(char *pidChar);
+void exit_function ();
 
 
 /*Function to read from the log file. Called by the monitor thread upon initialization.*/
@@ -145,11 +147,7 @@ int main(int argc, char *argv[])
 
 	/*Variables:
 	argNR = Number of Variable Arguments, pid = Process ID, lineArgs = Input String, pidList = Process List.*/
-	int openTerminals[MAXTERMINALS];
-	memset(&openTerminals,0,sizeof(openTerminals));
-	int numTerminals = 0;
 	int argNr = 6, pid, returnValue;
-	int n;
 	char * lineArgs[argNr];
 	pidList = lst_new();
 	termList = lst_term_new();
@@ -160,6 +158,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&mutex, NULL);
 	pthread_cond_init(&condMonitor, NULL);
 	pthread_cond_init(&condMaxpar, NULL);
+	signal (SIGINT, exit_function);
 	logger = fopen ("logger.txt", "a+");
 	if(logger == NULL)
 	{
@@ -168,24 +167,24 @@ int main(int argc, char *argv[])
 	}
 
 	/*Creation of monitor thread*/
-	pthread_t monitor;
 	pthread_create(&monitor, 0, monitoriza, NULL);
 
 	/*Creation of the Pipe*/
-	returnValue = mkfifo(PIPE, S_IRWXU);
+	returnValue = mkfifo(PIPEIN, S_IRWXU);
     printf("The mkfifo() call returned %d\n", returnValue); //debug
 
     /*Redirecting Stdin to Pipe*/
     int pipeFd;
     close(STDIN_FILENO);
-    pipeFd = open(PIPE, O_RDONLY);
+    pipeFd = open(PIPEIN, O_RDONLY);
     dup2(pipeFd, STDIN_FILENO);
     while(1)
     {
+    	lst_term_print(termList);
     	if(readLineArguments(lineArgs,argNr+1) == -1)
     	{
     		close(pipeFd);
-    		pipeFd = open(PIPE, O_RDONLY);
+    		pipeFd = open(PIPEIN, O_RDONLY);
     		continue;
     	}
 		/*"exit"
@@ -196,13 +195,12 @@ int main(int argc, char *argv[])
 
 		if(NULL == lineArgs[0])
 		{
-			return 0;
+			continue;
 		}
 
 		if(strcmp ("[new]", lineArgs[0]) == 0)
 		{
 			lst_term_insert(termList, atoi(lineArgs[1]));
-			lst_term_print(termList);
 			continue;
 		}
 
@@ -214,6 +212,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
+
 		if(strcmp ("stats", lineArgs[0]) == 0)
 		{
 			sendStatsPidPipe(lineArgs[1]);
@@ -223,18 +222,7 @@ int main(int argc, char *argv[])
 
 		if(strcmp ("exit-global", lineArgs[0]) == 0)
 		{
-			
-			exitcalled = 1;
-			pthread_cond_signal(&condMaxpar);
-			pthread_cond_signal(&condMonitor);
-			pthread_join(monitor, NULL);
-			lst_print(pidList);
-			fclose(logger);
-			lst_destroy(pidList);
-			pthread_mutex_destroy(&mutex);
-			pthread_cond_destroy(&condMonitor);
-			pthread_cond_destroy(&condMaxpar);
-			exit(EXIT_SUCCESS);
+			exit_function();
 		}
 		/*"pathname"
 		If anything but "exit" is found, a new child process is opened with "fork()", and if it's the child, "execv()" is run.
@@ -286,19 +274,42 @@ int main(int argc, char *argv[])
 
 void sendStatsPidPipe(char *pidChar){
 	
-	//TEMP return
-	//return;
-	
-	int pidPipe, terminal_stdout, sofd;
+	int pidPipe, writeResult;
 	char parShellOut[20] = PIPEOUT;
 	char statsMessage[MESSAGE_LENGHT];
+
 	
 	strcat(parShellOut, pidChar);
 	
-    pidPipe = open(parShellOut, O_RDWR);	
-	//Write code to send stats here
+	pidPipe = open(parShellOut, O_WRONLY);
 	sprintf(statsMessage, "%d filhos em execução.\t Tempo total de filhos já executados: %d segundos.\n", numChildren, execTime);
-	write(pidPipe,statsMessage,strlen(statsMessage));
-	close(pidPipe);
+	writeResult = write(pidPipe, statsMessage, MESSAGE_LENGHT);
+
+	if(writeResult != MESSAGE_LENGHT)
+	{	
+		printf("Size: %d\t", MESSAGE_LENGHT);
+		printf("Written: %d\t", writeResult);
+		perror("Failed to write string to the pipe.\n");
+		close(pidPipe);
+		return;
+	}
 	return;
+}
+
+
+void exit_function ()
+{
+	exitcalled = 1;
+	pthread_cond_signal(&condMaxpar);
+	pthread_cond_signal(&condMonitor);
+	pthread_join(monitor, NULL);
+	lst_print(pidList);
+	fclose(logger);
+	lst_destroy(pidList);
+	pthread_mutex_destroy(&mutex);
+	pthread_cond_destroy(&condMonitor);
+	pthread_cond_destroy(&condMaxpar);
+	lst_term_destroy(termList);
+	unlink(PIPEIN);
+	exit(EXIT_SUCCESS);
 }

@@ -19,6 +19,21 @@ list_term* lst_term_new()
 	return list;
 }
 
+ void lst_term_destroy(list_term *list)
+ {
+ 	struct lst_iitem_term *item, *nextitem;
+
+ 	item = list->first;
+ 	while (item != NULL)
+ 	{
+ 		kill(item->pid, SIGINT);
+ 		nextitem = item->next;
+ 		free(item);
+ 		item = nextitem;
+ 	}
+ 	free(list);
+ }
+
 
 void lst_term_insert(list_term *list, int pid)
 {
@@ -34,6 +49,9 @@ void lst_te_remove(list_term *list, int pid)
 	lst_iitem_term *item, *nextitem;
  	item = list->first;
 
+ 	if (list->first == NULL)
+ 		return;
+
  	if(item->pid == pid)
  	{
  		nextitem = item->next;
@@ -41,7 +59,6 @@ void lst_te_remove(list_term *list, int pid)
  		list->first = nextitem;
  		return;
  	}
-
  	while (item != NULL)
  	{
  		if(item->next != NULL)
@@ -62,7 +79,7 @@ void lst_term_print(list_term *list)
 {
 	lst_iitem_term *item;
  	item = list->first;
- 	printf("---\n");
+ 	printf("\n---\n");
  	while (item != NULL)
  	{
  		printf("Process ID: %d | ", item->pid);

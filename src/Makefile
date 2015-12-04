@@ -17,4 +17,4 @@ par-shell.o: par-shell.c list.h commandlinereader.h
 	gcc -Wall -g -c par-shell.c
 
 clean:
-	rm -f *.o main par-shell par-shell-terminal par-shell-in 
+	rm -f *.o main par-shell par-shell-terminal par-shell-in *.txt pipe-out*
