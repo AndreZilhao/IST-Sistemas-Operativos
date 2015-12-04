@@ -32,17 +32,23 @@ exit
 #define MAXLINE 40
 #define MAXPAR 2
 #define PIPE "par-shell-in"
+#define MAXTERMINALS 50
+#define PIPEOUT "pipe-out-"
+#define MESSAGE_LENGHT 100
 
 int numChildren;
 int exitcalled;
 int numIter;
 int execTime;
-char logline[MAXLINE];
 list_t *pidList;
+list_term *termList;
 pthread_mutex_t mutex;
 pthread_cond_t condMonitor;
 pthread_cond_t condMaxpar;
 FILE * logger;
+
+void sendStatsPidPipe(char *pidChar);
+
 
 /*Function to read from the log file. Called by the monitor thread upon initialization.*/
 void logger_read()
@@ -50,6 +56,7 @@ void logger_read()
 	int i = 0;
 	int disposable1 = 0;
 	int disposable2 = 0;
+	char logline[MAXLINE];
 
 	while (fgets(logline, MAXLINE, logger) != NULL)
 	{
@@ -138,9 +145,14 @@ int main(int argc, char *argv[])
 
 	/*Variables:
 	argNR = Number of Variable Arguments, pid = Process ID, lineArgs = Input String, pidList = Process List.*/
+	int openTerminals[MAXTERMINALS];
+	memset(&openTerminals,0,sizeof(openTerminals));
+	int numTerminals = 0;
 	int argNr = 6, pid, returnValue;
+	int n;
 	char * lineArgs[argNr];
 	pidList = lst_new();
+	termList = lst_term_new();
 	exitcalled = 0;
 	numChildren = 0;
 	numIter = -1;
@@ -168,13 +180,14 @@ int main(int argc, char *argv[])
     close(STDIN_FILENO);
     pipeFd = open(PIPE, O_RDONLY);
     dup2(pipeFd, STDIN_FILENO);
-	while(1)
-	{
-		if(readLineArguments(lineArgs,argNr+1) == -1)
-		{
-			printf("laskjdklasjdklaj");
-			continue;
-		}
+    while(1)
+    {
+    	if(readLineArguments(lineArgs,argNr+1) == -1)
+    	{
+    		close(pipeFd);
+    		pipeFd = open(PIPE, O_RDONLY);
+    		continue;
+    	}
 		/*"exit"
 		If "exit" is found, two iterations of the process list are run. The first one calls "waitpid()" on all child processes,
 		and the second one prints the Process ID and return value.*/
@@ -186,8 +199,31 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 
-		if(strcmp ("exit", lineArgs[0]) == 0)
+		if(strcmp ("[new]", lineArgs[0]) == 0)
 		{
+			lst_term_insert(termList, atoi(lineArgs[1]));
+			lst_term_print(termList);
+			continue;
+		}
+
+		if(strcmp ("[del]", lineArgs[0]) == 0)
+		{
+			printf("%d\n", atoi(lineArgs[1]));
+			lst_te_remove(termList, atoi(lineArgs[1]));
+			lst_term_print(termList);
+			continue;
+		}
+
+		if(strcmp ("stats", lineArgs[0]) == 0)
+		{
+			sendStatsPidPipe(lineArgs[1]);
+			printf("Mensagem enviada para o Terminal de PID: %s\n", lineArgs [1]);
+			continue;
+		}
+
+		if(strcmp ("exit-global", lineArgs[0]) == 0)
+		{
+			
 			exitcalled = 1;
 			pthread_cond_signal(&condMaxpar);
 			pthread_cond_signal(&condMonitor);
@@ -246,4 +282,23 @@ int main(int argc, char *argv[])
 		}
 	}	
 	return 0;
+}
+
+void sendStatsPidPipe(char *pidChar){
+	
+	//TEMP return
+	//return;
+	
+	int pidPipe, terminal_stdout, sofd;
+	char parShellOut[20] = PIPEOUT;
+	char statsMessage[MESSAGE_LENGHT];
+	
+	strcat(parShellOut, pidChar);
+	
+    pidPipe = open(parShellOut, O_RDWR);	
+	//Write code to send stats here
+	sprintf(statsMessage, "%d filhos em execução.\t Tempo total de filhos já executados: %d segundos.\n", numChildren, execTime);
+	write(pidPipe,statsMessage,strlen(statsMessage));
+	close(pidPipe);
+	return;
 }

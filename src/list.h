@@ -25,8 +25,32 @@ typedef struct {
    lst_iitem_t * first;
 } list_t;
 
+/* lst_iitem_term - each element of the list points to the next element */
+typedef struct lst_iitem_term {
+   int pid;
+   struct lst_iitem_term *next;
+} lst_iitem_term;
+
+/* list_term */
+typedef struct {
+   lst_iitem_term * first;
+} list_term;
 
 
+/* lst_term_new - allocate memory for list_term and initializes it */
+list_term* lst_term_new();
+
+/* lst_term_insert -  insert a new item with process id in terminal list */
+void lst_term_insert(list_term *list, int pid);
+
+/* lst_term_remove - remove process id from terminal list*/
+void lst_te_remove(list_term *list, int pid);
+
+/* lst_term_print - print the terminal */
+void lst_term_print(list_term *list);
+
+
+///----------------------------------------------------///
 /* lst_new - allocates memory for list_t and initializes it */
 list_t* lst_new();
 
@@ -36,7 +60,7 @@ void lst_destroy(list_t *);
 /* insert_new_process - insert a new item with process id */
 void insert_new_process(list_t *list, int pid, time_t starttime);
 
-/* lst_remove - remove first item of value 'value' from list 'list' */
+/* terminate_process - remove first item of value 'value' from list 'list' */
 void terminate_process(list_t *list, int pid);
 
 /* check_copy - checks to see if pid exists in list */

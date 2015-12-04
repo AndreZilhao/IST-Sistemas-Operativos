@@ -11,6 +11,68 @@
 #include <time.h>
 
 
+list_term* lst_term_new()
+{
+	list_term *list;
+	list = (list_term*) malloc(sizeof(list_term));
+	list->first = NULL;
+	return list;
+}
+
+
+void lst_term_insert(list_term *list, int pid)
+{
+ 	lst_iitem_term *item;
+ 	item = (lst_iitem_term*) malloc(sizeof(lst_iitem_term));
+ 	item->pid = pid;
+ 	item->next = list->first;
+ 	list->first = item;
+}
+
+void lst_te_remove(list_term *list, int pid)
+{
+	lst_iitem_term *item, *nextitem;
+ 	item = list->first;
+
+ 	if(item->pid == pid)
+ 	{
+ 		nextitem = item->next;
+ 		free(list->first);
+ 		list->first = nextitem;
+ 		return;
+ 	}
+
+ 	while (item != NULL)
+ 	{
+ 		if(item->next != NULL)
+ 		{
+ 			if (item->next->pid == pid)
+ 			{
+ 				nextitem = item->next;
+ 				item->next = item->next->next;
+ 				free(nextitem);
+ 				return;
+ 			}		
+ 		}
+ 		item = item->next;
+ 	}
+}
+
+void lst_term_print(list_term *list)
+{
+	lst_iitem_term *item;
+ 	item = list->first;
+ 	printf("---\n");
+ 	while (item != NULL)
+ 	{
+ 		printf("Process ID: %d | ", item->pid);
+ 		item = item->next;
+ 	}
+}
+
+
+//-----------------------------------------//
+
 
  list_t* lst_new()
  {
