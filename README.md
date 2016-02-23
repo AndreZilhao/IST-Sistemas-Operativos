@@ -30,3 +30,4 @@ Nos seguintes links encontram-se as especificações de cada um dos exercicios p
 [Exercicio 4](https://drive.google.com/file/d/0B8BT07stj_OxUTBwcmJYVEs4Ymc/view?usp=sharing)  
 [Exercicio 5](https://drive.google.com/file/d/0B8BT07stj_OxZDlOVzB1Wm5uX1E/view?usp=sharing)  
 
+##### Final grade: [19/20]
