@@ -31,7 +31,7 @@ exit
 #include "list.h"
 #include "commandlinereader.h"
 #define MAXLINE 40
-#define MAXPAR 2
+#define MAXPAR 8
 #define PIPEIN "par-shell-in"
 #define PIPEOUT "pipe-out "
 #define MESSAGE_LENGHT 100
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 
 	/*Variables:
 	argNR = Number of Variable Arguments, pid = Process ID, lineArgs = Input String, pidList = Process List.*/
-	int argNr = 6, pid, returnValue;
+	int argNr = 6, pid;
 	char * lineArgs[argNr];
 	pidList = lst_new();
 	termList = lst_term_new();
@@ -170,8 +170,7 @@ int main(int argc, char *argv[])
 	pthread_create(&monitor, 0, monitoriza, NULL);
 
 	/*Creation of the Pipe*/
-	returnValue = mkfifo(PIPEIN, S_IRWXU);
-    printf("The mkfifo() call returned %d\n", returnValue); //debug
+	mkfifo(PIPEIN, S_IRWXU);
 
     /*Redirecting Stdin to Pipe*/
     int pipeFd;
@@ -180,7 +179,6 @@ int main(int argc, char *argv[])
     dup2(pipeFd, STDIN_FILENO);
     while(1)
     {
-    	lst_term_print(termList);
     	if(readLineArguments(lineArgs,argNr+1) == -1)
     	{
     		close(pipeFd);
@@ -191,7 +189,6 @@ int main(int argc, char *argv[])
 		If "exit" is found, two iterations of the process list are run. The first one calls "waitpid()" on all child processes,
 		and the second one prints the Process ID and return value.*/
 
-		//printf("%s\n", lineArgs[0] );
 
 		if(NULL == lineArgs[0])
 		{
@@ -206,9 +203,7 @@ int main(int argc, char *argv[])
 
 		if(strcmp ("[del]", lineArgs[0]) == 0)
 		{
-			printf("%d\n", atoi(lineArgs[1]));
 			lst_te_remove(termList, atoi(lineArgs[1]));
-			lst_term_print(termList);
 			continue;
 		}
 
@@ -216,7 +211,6 @@ int main(int argc, char *argv[])
 		if(strcmp ("stats", lineArgs[0]) == 0)
 		{
 			sendStatsPidPipe(lineArgs[1]);
-			printf("Mensagem enviada para o Terminal de PID: %s\n", lineArgs [1]);
 			continue;
 		}
 
@@ -299,6 +293,7 @@ void sendStatsPidPipe(char *pidChar){
 
 void exit_function ()
 {
+	printf("\n");
 	exitcalled = 1;
 	pthread_cond_signal(&condMaxpar);
 	pthread_cond_signal(&condMonitor);
@@ -311,5 +306,6 @@ void exit_function ()
 	pthread_cond_destroy(&condMaxpar);
 	lst_term_destroy(termList);
 	unlink(PIPEIN);
+	printf("\n");
 	exit(EXIT_SUCCESS);
 }

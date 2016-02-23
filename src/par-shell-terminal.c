@@ -75,13 +75,11 @@ int main(int argc, char *argv[])
 		{
 			char parShellOut[20] = PIPEOUT;
 			char statsMessage[MESSAGE_LENGHT];
-			int returnPipe;
 			int messageFd;
 
 			snprintf(localPid, 8, " %d", (int) getpid());
 			strcat(parShellOut, localPid);
-			returnPipe = mkfifo(parShellOut, S_IRWXU);
-			printf("The mkfifo() call returned %d\n", returnPipe);
+			mkfifo(parShellOut, S_IRWXU);
 
 			snprintf(localPid, 8, " %d\n", (int) getpid());
 			output = strcat(firstArgument,localPid);
